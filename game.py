@@ -100,9 +100,10 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
+                if event.type == pygame.TEXTINPUT:
+                    if event.text.isalpha() and not self.game_over:
+                        self.handle_input(event.text.lower())
                 if event.type == pygame.KEYDOWN:
-                    if event.unicode.isalpha() and not self.game_over:
-                        self.handle_input(event.unicode.lower())
                     if event.key == pygame.K_r and self.lives <= 0:
                         self.__init__()
 
