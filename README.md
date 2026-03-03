@@ -77,9 +77,3 @@ Regras aplicadas pelo carregador:
 - `len-en` deve bater com o tamanho de `en`
 - Arquivo inexistente gera erro
 
-## Ferramentas utilizadas
-
-- Python
-- Pygame
-- Editor: VS Code
-- Controle de versão: Git/GitHub
