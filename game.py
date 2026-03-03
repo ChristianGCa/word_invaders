@@ -16,7 +16,7 @@ class Game:
 
         self.game_over = False
         self.clock = pygame.time.Clock()
-        self.words_data = load_words("words.csv")
+        self.words_data = load_words("base_100_palavras.csv")
 
         self.words = []
         self.projectiles = []
