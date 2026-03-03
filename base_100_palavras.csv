@@ -10,6 +10,7 @@ pão,3,bread,5
 rio,3,river,5
 rua,3,street,6
 sol,3,sun,3
+água,4,water,5
 aula,4,class,5
 cama,4,bed,3
 casa,4,house,5
@@ -27,7 +28,6 @@ rato,4,mouse,5
 tela,4,screen,6
 trem,4,train,5
 vaca,4,cow,3
-água,4,water,5
 aluno,5,student,7
 amigo,5,friend,6
 areia,5,sand,4
@@ -61,14 +61,13 @@ banana,6,banana,6
 caneta,6,pen,3
 cavalo,6,horse,5
 cidade,6,city,4
+código,6,code,4
 coelho,6,rabbit,6
 comida,6,food,4
-código,6,code,4
 escala,6,scale,5
 escola,6,school,6
 feijão,6,beans,5
 função,6,function,8
-janela,6,window,6
 janela,6,window,6
 matriz,6,matrix,6
 ovelha,6,sheep,5
@@ -79,13 +78,13 @@ tronco,6,trunk,5
 ônibus,6,bus,3
 arquivo,7,file,4
 cadeira,7,chair,5
-criança,7,child,5
 círculo,7,circle,6
+criança,7,child,5
 estrada,7,road,4
 família,7,family,6
 laranja,7,orange,6
-projeto,7,project,7
 pássaro,7,bird,4
+projeto,7,project,7
 relógio,7,clock,5
 rotação,7,rotation,8
 teclado,7,keyboard,8

@@ -8,10 +8,12 @@ WIDTH = 800
 HEIGHT = 600
 
 class Game:
-    def __init__(self):
+    def __init__(self, start_fullscreen=False):
         pygame.mixer.pre_init(44100, -16, 2, 512)
         pygame.init()
-        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        self.window_size = (WIDTH, HEIGHT)
+        self.is_fullscreen = start_fullscreen
+        self.set_display_mode()
         pygame.display.set_caption("Word Defender")
 
         self.game_over = False
@@ -26,7 +28,7 @@ class Game:
         self.cannon_img = pygame.transform.scale(self.cannon_img_original, (120, 120))
 
         self.cannon_rect = self.cannon_img.get_rect()
-        self.cannon_rect.center = (WIDTH // 2, HEIGHT - 100)
+        self.update_cannon_position()
 
         self.shoot_sound = pygame.mixer.Sound("assets/sounds/shoot.wav")
         self.error_sound = pygame.mixer.Sound("assets/sounds/error.wav")
@@ -42,32 +44,106 @@ class Game:
         self.lives = 3
         self.level = 1
 
+        self.word_measure_font = pygame.font.Font("assets/fonts/Bitcount.ttf", 30)
+        self.spawn_horizontal_gap = 30
+
         self.spawn_timer = 0
+        self.next_word_orange = True
         self.running = True
 
+    def set_display_mode(self):
+        if self.is_fullscreen:
+            self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        else:
+            self.screen = pygame.display.set_mode(self.window_size)
+
+        self.width, self.height = self.screen.get_size()
+
+    def update_cannon_position(self):
+        self.cannon_rect.center = (self.width // 2, self.height - 100)
+
+    def toggle_fullscreen(self):
+        self.is_fullscreen = not self.is_fullscreen
+        self.set_display_mode()
+        self.update_cannon_position()
+
+    def get_level_config(self):
+        if self.level <= 1:
+            return {"max_words": 1, "spawn_interval": 120, "len_min": 3, "len_max": 5}
+        if self.level == 2:
+            return {"max_words": 2, "spawn_interval": 95, "len_min": 4, "len_max": 6}
+        if self.level == 3:
+            return {"max_words": 3, "spawn_interval": 75, "len_min": 5, "len_max": 8}
+        return {"max_words": 4, "spawn_interval": 60, "len_min": 6, "len_max": 20}
+
+    def get_word_rect(self, text, x, y):
+        text_surface = self.word_measure_font.render(text, True, (255, 255, 255))
+        return pygame.Rect(x, y, text_surface.get_width() + 20, text_surface.get_height() + 20)
+
+    def has_spawn_collision(self, new_rect):
+        spaced_rect = new_rect.inflate(self.spawn_horizontal_gap * 2, 0)
+        for active_word in self.words:
+            active_rect = self.get_word_rect(active_word.remaining_text, active_word.x, active_word.y)
+            if spaced_rect.colliderect(active_rect):
+                return True
+        return False
+
     def spawn_word(self):
-        data = random.choice(self.words_data)
+        level_config = self.get_level_config()
+        use_pt = random.random() < 0.5
+        if use_pt:
+            text_key = "pt"
+            len_key = "len_pt"
+        else:
+            text_key = "en"
+            len_key = "len_en"
+
+        candidates = [
+            word_data for word_data in self.words_data
+            if level_config["len_min"] <= word_data[len_key] <= level_config["len_max"]
+        ]
+        if not candidates:
+            candidates = self.words_data
+
+        data = random.choice(candidates)
 
         # Escolhe idioma aleatoriamente
-        if random.random() < 0.5:
-            text = data["pt"]
-        else:
-            text = data["en"]
+        text = data[text_key]
 
-        x = random.randint(50, WIDTH - 150)
+        base_rect = self.get_word_rect(text, 0, 0)
+        min_x = 20
+        max_x = self.width - base_rect.width - 20
+        if max_x < min_x:
+            return
+
+        x = None
+        for _ in range(20):
+            candidate_x = random.randint(min_x, max_x)
+            candidate_rect = self.get_word_rect(text, candidate_x, 0)
+            if not self.has_spawn_collision(candidate_rect):
+                x = candidate_x
+                break
+
+        if x is None:
+            return
+
         speed = 1 + self.level * 0.5
 
-        color = (0, 100, 255) if random.random() < 0.5 else (255, 100, 0)
+        if self.next_word_orange:
+            color = (255, 100, 0)
+        else:
+            color = (0, 100, 255)
 
         word = Word(text, x, 0, speed, color)
         self.words.append(word)
+        self.next_word_orange = not self.next_word_orange
 
     def update_level(self):
-        if self.score > 3:
+        if self.score > 20:
             self.level = 2
-        if self.score > 9:
+        if self.score > 50:
             self.level = 3
-        if self.score > 15:
+        if self.score > 90:
             self.level = 4
 
     def handle_input(self, letter):
@@ -78,8 +154,8 @@ class Game:
                 target_y = word.y + 10
 
                 projectile = Projectile(
-                    WIDTH // 2,
-                    HEIGHT - 40,
+                    self.width // 2,
+                    self.height - 40,
                     target_x,
                     target_y
                 )
@@ -97,6 +173,9 @@ class Game:
             self.clock.tick(60)
             self.screen.fill((30,30,30))
 
+            self.update_level()
+            level_config = self.get_level_config()
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
@@ -105,13 +184,18 @@ class Game:
                         self.handle_input(event.text.lower())
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_r and self.lives <= 0:
-                        self.__init__()
+                        self.__init__(start_fullscreen=self.is_fullscreen)
+                    if event.key == pygame.K_F11:
+                        self.toggle_fullscreen()
 
             if not self.game_over:
                 self.spawn_timer += 1
-                if self.spawn_timer > 120:
-                    self.spawn_word()
-                    self.spawn_timer = 0
+                if self.spawn_timer > level_config["spawn_interval"]:
+                    if len(self.words) < level_config["max_words"]:
+                        self.spawn_word()
+                        self.spawn_timer = 0
+                    else:
+                        self.spawn_timer = level_config["spawn_interval"]
 
             for word in self.words[:]:
                 if not self.game_over:
@@ -119,7 +203,7 @@ class Game:
 
                 word.draw(self.screen)
 
-                if word.y > HEIGHT-80:
+                if word.y > self.height - 80:
                     self.life_losted_sound.play()
                     self.lives -= 1
                     self.words.remove(word)
@@ -137,19 +221,28 @@ class Game:
                 if not projectile.active:
                     self.projectiles.remove(projectile)
 
-            self.update_level()
-
             # HUD
-            font = pygame.font.SysFont("arial", 24)
+            font = pygame.font.Font("assets/fonts/Micro5-Regular.ttf", 34)
             hud = font.render(f"Score: {self.score}  Lives: {self.lives}  Level: {self.level}", True, (255,255,255))
             self.screen.blit(hud, (10,10))
 
+            hint_font = pygame.font.Font("assets/fonts/Micro5-Regular.ttf", 28)
+            if self.is_fullscreen:
+                hint_text = "F11 para modo janela"
+            else:
+                hint_text = "F11 para tela cheia"
+            hint_surface = hint_font.render(hint_text, True, (255, 255, 255))
+            hint_rect = hint_surface.get_rect(topright=(self.width - 10, 10))
+            self.screen.blit(hint_surface, hint_rect)
+
             # Plataforma
-            pygame.draw.rect(self.screen, (100,255,100), (0, HEIGHT-40, WIDTH, 40))
+            pygame.draw.rect(self.screen, (100,255,100), (0, self.height - 40, self.width, 40))
 
             if self.lives <= 0:
-                gameover = font.render("GAME OVER - Pressione R", True, (255,0,0))
-                self.screen.blit(gameover, (250,300))
+                gameover_font = pygame.font.Font("assets/fonts/Micro5-Regular.ttf", 64)
+                gameover = gameover_font.render("GAME OVER - Pressione R", True, (255,0,0))
+                gameover_rect = gameover.get_rect(center=(self.width // 2, self.height // 2))
+                self.screen.blit(gameover, gameover_rect)
 
             self.screen.blit(self.cannon_img, self.cannon_rect)
             pygame.display.flip()

@@ -8,13 +8,13 @@ class Word:
         self.y = y
         self.speed = speed
         self.color = color
-        self.font = pygame.font.SysFont("arial", 28)
+        #self.font = pygame.font.SysFont("arial", 28)
 
     def update(self):
         self.y += self.speed
 
     def draw(self, screen):
-        font = pygame.font.SysFont("consolas", 30, bold=True)
+        font = pygame.font.Font("assets/fonts/Bitcount.ttf", 30)
 
         # Primeira letra destacada
         if self.remaining_text:
