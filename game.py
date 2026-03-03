@@ -195,6 +195,15 @@ class Game:
             hud = font.render(f"Score: {self.score}  Lives: {self.lives}  Level: {self.level}", True, (255,255,255))
             self.screen.blit(hud, (10,10))
 
+            hint_font = pygame.font.Font("assets/fonts/Micro5-Regular.ttf", 28)
+            if self.is_fullscreen:
+                hint_text = "F11 para modo janela"
+            else:
+                hint_text = "F11 para tela cheia"
+            hint_surface = hint_font.render(hint_text, True, (255, 255, 255))
+            hint_rect = hint_surface.get_rect(topright=(self.width - 10, 10))
+            self.screen.blit(hint_surface, hint_rect)
+
             # Plataforma
             pygame.draw.rect(self.screen, (100,255,100), (0, self.height - 40, self.width, 40))
 
