@@ -44,6 +44,9 @@ class Game:
         self.lives = 3
         self.level = 1
 
+        self.word_measure_font = pygame.font.Font("assets/fonts/Bitcount.ttf", 30)
+        self.spawn_horizontal_gap = 30
+
         self.spawn_timer = 0
         self.next_word_orange = True
         self.running = True
@@ -73,6 +76,18 @@ class Game:
             return {"max_words": 3, "spawn_interval": 75, "len_min": 5, "len_max": 8}
         return {"max_words": 4, "spawn_interval": 60, "len_min": 6, "len_max": 20}
 
+    def get_word_rect(self, text, x, y):
+        text_surface = self.word_measure_font.render(text, True, (255, 255, 255))
+        return pygame.Rect(x, y, text_surface.get_width() + 20, text_surface.get_height() + 20)
+
+    def has_spawn_collision(self, new_rect):
+        spaced_rect = new_rect.inflate(self.spawn_horizontal_gap * 2, 0)
+        for active_word in self.words:
+            active_rect = self.get_word_rect(active_word.remaining_text, active_word.x, active_word.y)
+            if spaced_rect.colliderect(active_rect):
+                return True
+        return False
+
     def spawn_word(self):
         level_config = self.get_level_config()
         use_pt = random.random() < 0.5
@@ -95,17 +110,33 @@ class Game:
         # Escolhe idioma aleatoriamente
         text = data[text_key]
 
-        x = random.randint(50, self.width - 150)
+        base_rect = self.get_word_rect(text, 0, 0)
+        min_x = 20
+        max_x = self.width - base_rect.width - 20
+        if max_x < min_x:
+            return
+
+        x = None
+        for _ in range(20):
+            candidate_x = random.randint(min_x, max_x)
+            candidate_rect = self.get_word_rect(text, candidate_x, 0)
+            if not self.has_spawn_collision(candidate_rect):
+                x = candidate_x
+                break
+
+        if x is None:
+            return
+
         speed = 1 + self.level * 0.5
 
         if self.next_word_orange:
             color = (255, 100, 0)
         else:
             color = (0, 100, 255)
-        self.next_word_orange = not self.next_word_orange
 
         word = Word(text, x, 0, speed, color)
         self.words.append(word)
+        self.next_word_orange = not self.next_word_orange
 
     def update_level(self):
         if self.score > 20:
