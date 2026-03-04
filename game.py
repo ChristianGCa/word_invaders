@@ -13,8 +13,14 @@ class Game:
         pygame.init()
         self.window_size = (WIDTH, HEIGHT)
         self.is_fullscreen = start_fullscreen
+        
         self.set_display_mode()
         pygame.display.set_caption("Word Defender")
+        
+        # Carregar imagens APÓS criar o display
+        self.background_img_original = pygame.image.load("assets/sprites/background.png").convert()
+        self.base_img_original = pygame.image.load("assets/sprites/base.png").convert_alpha()
+        self.resize_images()
 
         self.game_over = False
         self.clock = pygame.time.Clock()
@@ -22,13 +28,6 @@ class Game:
 
         self.words = []
         self.projectiles = []
-
-        self.cannon_img_original = pygame.image.load("assets/sprites/cannon.png").convert_alpha()
-        self.cannon_img = pygame.transform.scale2x(self.cannon_img_original)
-        self.cannon_img = pygame.transform.scale(self.cannon_img_original, (120, 120))
-
-        self.cannon_rect = self.cannon_img.get_rect()
-        self.update_cannon_position()
 
         self.shoot_sound = pygame.mixer.Sound("assets/sounds/shoot.wav")
         self.error_sound = pygame.mixer.Sound("assets/sounds/error.wav")
@@ -58,14 +57,23 @@ class Game:
             self.screen = pygame.display.set_mode(self.window_size)
 
         self.width, self.height = self.screen.get_size()
+        
+        # Redimensionar imagens se já foram carregadas
+        if hasattr(self, 'background_img_original'):
+            self.resize_images()
 
-    def update_cannon_position(self):
-        self.cannon_rect.center = (self.width // 2, self.height - 100)
+    def resize_images(self):
+        # Redimensiona background mantendo proporção (160x120)
+        self.background_img = pygame.transform.scale(self.background_img_original, (self.width, self.height))
+        
+        # Redimensiona base para largura total com altura proporcional (mantém visual)
+        base_width = self.width
+        base_height = int(base_width * 0.1)  # 10% da largura para manter proporção visual
+        self.base_img = pygame.transform.scale(self.base_img_original, (base_width, base_height))
 
     def toggle_fullscreen(self):
         self.is_fullscreen = not self.is_fullscreen
         self.set_display_mode()
-        self.update_cannon_position()
 
     def get_level_config(self):
         if self.level <= 1:
@@ -155,7 +163,7 @@ class Game:
 
                 projectile = Projectile(
                     self.width // 2,
-                    self.height - 40,
+                    self.height - self.base_img.get_height(),
                     target_x,
                     target_y
                 )
@@ -171,7 +179,7 @@ class Game:
     def run(self):
         while self.running:
             self.clock.tick(60)
-            self.screen.fill((30,30,30))
+            self.screen.blit(self.background_img, (0, 0))
 
             self.update_level()
             level_config = self.get_level_config()
@@ -203,19 +211,18 @@ class Game:
 
                 word.draw(self.screen)
 
-                if word.y > self.height - 80:
+                if word.y > self.height - self.base_img.get_height():
                     self.life_losted_sound.play()
                     self.lives -= 1
                     self.words.remove(word)
                     if self.lives <= 0:
                         self.game_over = True
 
-                if word.is_destroyed():
+                elif word.is_destroyed():
                     self.explosion_sound.play()
                     self.words.remove(word)
 
             for projectile in self.projectiles[:]:
-                print(self.projectiles)
                 projectile.update()
                 projectile.draw(self.screen)
                 if not projectile.active:
@@ -235,16 +242,15 @@ class Game:
             hint_rect = hint_surface.get_rect(topright=(self.width - 10, 10))
             self.screen.blit(hint_surface, hint_rect)
 
-            # Plataforma
-            pygame.draw.rect(self.screen, (100,255,100), (0, self.height - 40, self.width, 40))
-
             if self.lives <= 0:
                 gameover_font = pygame.font.Font("assets/fonts/Micro5-Regular.ttf", 64)
                 gameover = gameover_font.render("GAME OVER - Pressione R", True, (255,0,0))
                 gameover_rect = gameover.get_rect(center=(self.width // 2, self.height // 2))
                 self.screen.blit(gameover, gameover_rect)
 
-            self.screen.blit(self.cannon_img, self.cannon_rect)
+            # Plataforma (renderizada por último para ficar na frente)
+            base_x = (self.width - self.base_img.get_width()) // 2
+            self.screen.blit(self.base_img, (base_x, self.height - self.base_img.get_height()))
             pygame.display.flip()
 
         pygame.quit()
